@@ -98,6 +98,7 @@ export default function Home() {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type },
+        mode: 'cors'
       });
 
       if (!uploadResponse.ok) throw new Error("Upload failed");
