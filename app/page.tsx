@@ -106,6 +106,7 @@ export default function Home() {
 
       if (!uploadResponse.ok) throw new Error("Upload failed");
 
+
       // Update backend record
       const updateResponse = await fetch(
           `${API_BASE_URL}/api/students/update-file`,
