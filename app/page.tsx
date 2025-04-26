@@ -101,7 +101,7 @@ export default function Home() {
           'x-amz-acl': 'private',
           'Content-Length': file.size.toString()
         },
-        mode: 'no-cors'
+        mode: 'cors'
       });
 
       if (!uploadResponse.ok) throw new Error("Upload failed");
