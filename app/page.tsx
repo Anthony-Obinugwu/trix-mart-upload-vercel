@@ -97,8 +97,11 @@ export default function Home() {
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        headers: { "Content-Type": file.type },
-        mode: 'no-cors'
+        headers: { "Content-Type": file.type,
+          'x-amz-acl': 'private',
+          'Content-Length': file.size.toString()
+        },
+        mode: 'cors'
       });
 
       if (!uploadResponse.ok) throw new Error("Upload failed");
