@@ -2,7 +2,7 @@
 import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
-import { useSearchParams } from 'next/navigation';
+
 
 type UploadMessage = {
   text: string;
@@ -10,8 +10,6 @@ type UploadMessage = {
 };
 
 export default function Home() {
-  const searchParams = useSearchParams();
-  const queryStudentId = searchParams.get('studentId');
   const [studentId, setStudentId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -24,10 +22,12 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (queryStudentId && typeof queryStudentId === 'string') {
-      setStudentId(queryStudentId);
+    const savedId = localStorage.getItem('whatsappStudentId');
+    if (savedId) {
+      setStudentId(savedId);
+      localStorage.removeItem('whatsappStudentId'); // Clear after use
     }
-  }, [queryStudentId]);
+  }, []);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
