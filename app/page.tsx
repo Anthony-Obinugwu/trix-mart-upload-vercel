@@ -1,9 +1,8 @@
-'use client';
-
-
+'use client'
 import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
-import {useRouter, useSearchParams} from 'next/navigation';
+import Head from "next/head";
+import { useSearchParams } from 'next/navigation';
 
 type UploadMessage = {
   text: string;
@@ -11,6 +10,8 @@ type UploadMessage = {
 };
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const queryStudentId = searchParams.get('studentId');
   const [studentId, setStudentId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -21,10 +22,6 @@ export default function Home() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const queryStudentId = searchParams.get('studentId');
 
   useEffect(() => {
     if (queryStudentId && typeof queryStudentId === 'string') {
@@ -157,7 +154,10 @@ export default function Home() {
 
   return (
       <>
-
+        <Head>
+          <title>Upload Student ID - TrixMart</title>
+          <meta name="description" content="Upload your student ID for verification" />
+        </Head>
         <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
           <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
             <div
