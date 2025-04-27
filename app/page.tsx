@@ -2,7 +2,7 @@
 import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
-import {useRouter} from 'next/router';
+import {useRouter} from 'next/navigation';
 
 type UploadMessage = {
   text: string;
