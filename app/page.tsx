@@ -1,7 +1,8 @@
 'use client'
-import { ChangeEvent, FormEvent, useState, useRef } from "react";
+import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
+import {useRouter} from 'next/router';
 
 type UploadMessage = {
   text: string;
@@ -18,6 +19,15 @@ export default function Home() {
     isError: false
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const router = useRouter();
+  const { studentId: queryStudentId } = router.query;
+
+  useEffect(() => {
+    if (queryStudentId && typeof queryStudentId === 'string') {
+      setStudentId(queryStudentId);
+    }
+  }, [queryStudentId]);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -73,18 +83,15 @@ export default function Home() {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
       if (!fileExtension) throw new Error("Could not determine file extension");
 
-      // Get pre-signed URL
-      const presignedResponse = await fetch(
-          `${API_BASE_URL}/api/students/get-presigned-url`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              studentId: Number(studentId),
-              fileExtension
-            }),
-          }
-      );
+      const presignedResponse = await fetch(`${API_BASE_URL}/api/students/get-presigned-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: Number(studentId),
+          fileExtension: fileExtension,
+          contentType: file.type
+        }),
+      });
 
       if (!presignedResponse.ok) {
         const error = await presignedResponse.json().catch(() => ({}));
@@ -93,34 +100,41 @@ export default function Home() {
 
       const { uploadUrl, fileKey } = await presignedResponse.json();
 
-      // Upload to S3
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        headers: { "Content-Type": file.type,
-          'x-amz-acl': 'private',
-          'Content-Length': file.size.toString()
+        headers: {
+          "Content-Type": file.type,
+          "x-amz-acl": "bucket-owner-full-control"
         },
         mode: 'cors'
       });
 
-      if (!uploadResponse.ok) throw new Error("Upload failed");
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
 
-
-      // Update backend record
-      const updateResponse = await fetch(
-          `${API_BASE_URL}/api/students/update-file`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              studentId: Number(studentId),
-              fileKey
-            }),
-          }
-      );
+      const updateResponse = await fetch(`${API_BASE_URL}/api/students/update-file`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: Number(studentId),
+          fileKey
+        }),
+      });
 
       if (!updateResponse.ok) throw new Error("Failed to update record");
+
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BOT_URL || "http://localhost:3000"}/upload-confirmation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId: Number(studentId) }),
+        });
+      } catch (notificationError) {
+        console.error("Failed to notify WhatsApp bot:", notificationError);
+      }
 
       setMessage({ text: "✅ Upload successful!", isError: false });
       setStudentId("");
