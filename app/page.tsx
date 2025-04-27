@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
