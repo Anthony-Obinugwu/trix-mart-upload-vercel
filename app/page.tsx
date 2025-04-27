@@ -2,7 +2,7 @@
 import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
-import {useRouter} from 'next/navigation';
+import {useRouter, useSearchParams} from 'next/navigation';
 
 type UploadMessage = {
   text: string;
@@ -21,7 +21,9 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
-  const { studentId: queryStudentId } = router.query;
+  const searchParams = useSearchParams();
+
+  const queryStudentId = searchParams.get('studentId');
 
   useEffect(() => {
     if (queryStudentId && typeof queryStudentId === 'string') {
