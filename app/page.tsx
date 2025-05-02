@@ -3,7 +3,6 @@ import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
 import Image from "next/image";
 import Head from "next/head";
 
-
 type UploadMessage = {
   text: string;
   isError: boolean;
@@ -20,32 +19,47 @@ export default function Home() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-
   useEffect(() => {
-    const savedId = localStorage.getItem('whatsappStudentId');
+    // Get studentId from URL params first (for DigitalOcean deployment links)
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+
+    // Fallback to localStorage if no URL param
+    const savedId = idFromUrl || localStorage.getItem('whatsappStudentId');
+
     if (savedId) {
       setStudentId(savedId);
-      localStorage.removeItem('whatsappStudentId'); // Clear after use
+      if (!idFromUrl) {
+        localStorage.removeItem('whatsappStudentId'); // Clear only if from localStorage
+      }
     }
   }, []);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080" || "http://localhost:3000";
+  // Updated environment variables for DigitalOcean deployment
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://147.182.193.125:8080";
+  const BOT_WEBHOOK_URL = process.env.NEXT_PUBLIC_BOT_URL || "http://147.182.193.125:3000";
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;``
+    if (!selectedFile) return;
 
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'gif', 'webp', 'svg'];
 
     if (!extension || !allowedExtensions.includes(extension)) {
-      setMessage({ text: "❌ Invalid file type. Allowed: " + allowedExtensions.join(', '), isError: true });
+      setMessage({
+        text: `❌ Invalid file type. Allowed: ${allowedExtensions.join(', ')}`,
+        isError: true
+      });
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     if (selectedFile.size > 5 * 1024 * 1024) {
-      setMessage({ text: "❌ File too large (max 5MB)", isError: true });
+      setMessage({
+        text: "❌ File too large (max 5MB)",
+        isError: true
+      });
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -69,11 +83,13 @@ export default function Home() {
     setStudentId(value);
   };
 
-// Replace handleSubmit with this Firebase-compatible version:
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !studentId) {
-      setMessage({ text: "❌ Please fill all fields", isError: true });
+      setMessage({
+        text: "❌ Please fill all fields",
+        isError: true
+      });
       return;
     }
 
@@ -85,42 +101,52 @@ export default function Home() {
       formData.append('file', file);
       formData.append('studentId', studentId);
 
+      // Add error handling for DigitalOcean deployment
       const response = await fetch(`${API_BASE_URL}/api/students/upload-id`, {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || "Upload failed");
+        const error = await response.text();
+        throw new Error(error || "Upload failed");
       }
 
-      // Notify WhatsApp bot
+      // Notify WhatsApp bot with better error handling
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_BOT_URL}/upload-confirmation`, {
+        const botResponse = await fetch(`${BOT_WEBHOOK_URL}/upload-confirmation`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId: Number(studentId) }),
+          body: JSON.stringify({ studentId }),
         });
+
+        if (!botResponse.ok) {
+          console.warn("Bot notification failed (non-critical)");
+        }
       } catch (notificationError) {
-        console.error("Failed to notify WhatsApp bot:", notificationError);
+        console.error("Bot notification error:", notificationError);
       }
 
-      setMessage({ text: "✅ Upload successful!", isError: false });
+      setMessage({
+        text: "✅ Upload successful! Your registration is complete.",
+        isError: false
+      });
+
+      // Reset form
       setStudentId("");
       setFile(null);
       setFilePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+
     } catch (err) {
       setMessage({
-        text: `❌ Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        text: `❌ Error: ${err instanceof Error ? err.message : "Upload failed"}`,
         isError: true,
       });
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
       <>
@@ -140,6 +166,7 @@ export default function Home() {
                   width={200}
                   height={36}
                   alt="TrixMart Logo"
+                  priority
               />
 
               <form onSubmit={handleSubmit} className="w-full">
@@ -151,12 +178,13 @@ export default function Home() {
                     placeholder="Student ID"
                     required
                     pattern="\d*"
+                    disabled={isLoading}
                 />
 
                 <div className="flex items-center justify-center w-full">
                   <label
                       htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                      className={`flex flex-col items-center justify-center w-full h-64 border-2 ${filePreview ? 'border-solid' : 'border-dashed'} rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${isLoading ? 'opacity-50' : ''}`}
                   >
                     {filePreview ? (
                         <div className="relative w-full h-full">
@@ -165,6 +193,7 @@ export default function Home() {
                               alt="Preview"
                               fill
                               className="object-contain p-2"
+                              sizes="(max-width: 768px) 100vw, 384px"
                           />
                         </div>
                     ) : (
@@ -200,6 +229,7 @@ export default function Home() {
                         onChange={handleFileChange}
                         accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf"
                         required
+                        disabled={isLoading}
                     />
                   </label>
                 </div>
@@ -207,13 +237,13 @@ export default function Home() {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isLoading ? 'Uploading...' : 'Upload ID'}
                 </button>
 
                 {message.text && (
-                    <p className={`mt-4 text-center ${message.isError ? 'text-red-500' : 'text-green-500'}`}>
+                    <p className={`mt-4 text-center ${message.isError ? 'text-red-500' : 'text-green-500'} transition-colors`}>
                       {message.text}
                     </p>
                 )}
@@ -239,7 +269,7 @@ export default function Home() {
             </a>
             <a
                 className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-                href=""
+                href="/terms"
                 target="_blank"
                 rel="noopener noreferrer"
             >
