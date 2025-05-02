@@ -33,7 +33,7 @@ export default function Home() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) return;``
 
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'gif', 'webp', 'svg'];
@@ -69,6 +69,7 @@ export default function Home() {
     setStudentId(value);
   };
 
+// Replace handleSubmit with this Firebase-compatible version:
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !studentId) {
@@ -80,54 +81,23 @@ export default function Home() {
     setMessage({ text: "", isError: false });
 
     try {
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      if (!fileExtension) throw new Error("Could not determine file extension");
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('studentId', studentId);
 
-      const presignedResponse = await fetch(`${API_BASE_URL}/api/students/get-presigned-url`, {
+      const response = await fetch(`${API_BASE_URL}/api/students/upload-id`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: Number(studentId),
-          fileExtension: fileExtension,
-          contentType: file.type
-        }),
+        body: formData,
       });
 
-      if (!presignedResponse.ok) {
-        const error = await presignedResponse.json().catch(() => ({}));
-        throw new Error(error.message || "Failed to get upload URL");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Upload failed");
       }
 
-      const { uploadUrl, fileKey } = await presignedResponse.json();
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-          "x-amz-acl": "bucket-owner-full-control"
-        },
-        mode: 'cors'
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-      }
-
-      const updateResponse = await fetch(`${API_BASE_URL}/api/students/update-file`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: Number(studentId),
-          fileKey
-        }),
-      });
-
-      if (!updateResponse.ok) throw new Error("Failed to update record");
-
+      // Notify WhatsApp bot
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_BOT_URL || "http://localhost:3000"}/upload-confirmation`, {
+        await fetch(`${process.env.NEXT_PUBLIC_BOT_URL}/upload-confirmation`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ studentId: Number(studentId) }),
