@@ -1,5 +1,5 @@
 'use client'
-import {ChangeEvent, FormEvent, useState, useRef, useEffect} from "react";
+import { ChangeEvent, FormEvent, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Head from "next/head";
 
@@ -19,25 +19,22 @@ export default function Home() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Cloudinary configuration - REPLACE THESE WITH YOUR ACTUAL VALUES
+  const CLOUD_NAME = 'dega42p1c'; // Get from Cloudinary dashboard
+  const UPLOAD_PRESET = 'student_id_uploads'; // Create in Cloudinary settings
+
   useEffect(() => {
-    // Get studentId from URL params first (for DigitalOcean deployment links)
     const urlParams = new URLSearchParams(window.location.search);
     const idFromUrl = urlParams.get('id');
-
-    // Fallback to localStorage if no URL param
     const savedId = idFromUrl || localStorage.getItem('whatsappStudentId');
 
     if (savedId) {
       setStudentId(savedId);
       if (!idFromUrl) {
-        localStorage.removeItem('whatsappStudentId'); // Clear only if from localStorage
+        localStorage.removeItem('whatsappStudentId');
       }
     }
   }, []);
-
-  // Updated environment variables for DigitalOcean deployment
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://147.182.193.125:8080";
-  const BOT_WEBHOOK_URL = process.env.NEXT_PUBLIC_BOT_URL || "http://147.182.193.125:3000";
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -83,6 +80,24 @@ export default function Home() {
     setStudentId(value);
   };
 
+  const uploadToCloudinary = async (file: File, studentId: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    // Set the filename to student ID + original extension
+    const extension = file.name.split('.').pop(); // Get file extension (jpg/png/etc)
+    formData.append('public_id', `student_ids/${studentId}.${extension}`);
+
+    const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+    );
+
+    if (!response.ok) throw new Error('Upload failed');
+    return response.json();
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !studentId) {
@@ -97,35 +112,9 @@ export default function Home() {
     setMessage({ text: "", isError: false });
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('studentId', studentId);
-
-      // Add error handling for DigitalOcean deployment
-      const response = await fetch(`${API_BASE_URL}/api/students/upload-id`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Upload failed");
-      }
-
-      // Notify WhatsApp bot with better error handling
-      try {
-        const botResponse = await fetch(`${BOT_WEBHOOK_URL}/upload-confirmation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId }),
-        });
-
-        if (!botResponse.ok) {
-          console.warn("Bot notification failed (non-critical)");
-        }
-      } catch (notificationError) {
-        console.error("Bot notification error:", notificationError);
-      }
+      // Upload to Cloudinary
+      const cloudinaryResponse = await uploadToCloudinary(file, studentId);
+      console.log('Upload successful:', cloudinaryResponse);
 
       setMessage({
         text: "✅ Upload successful! Your registration is complete.",
