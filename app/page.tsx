@@ -235,8 +235,7 @@ export default function Home() {
                   <>
                     <p className="font-semibold">Please Upload:</p>
                     <p>1. Your student ID</p>
-                    <p>2. Two product photos</p>
-                    <p>3. One video of you and your product</p>
+                    <p>2. Product photos</p>
                   </>
               )}
             </div>
