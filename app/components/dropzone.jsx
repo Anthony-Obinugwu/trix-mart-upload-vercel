@@ -10,6 +10,16 @@ const dropzone = ({
   allowedExtensions,
 }) => {
   const [validatedFilesAndUrl, setValidatedFilesAndUrl] = useState([]);
+  
+    useEffect(() => {
+      return () => {
+        validatedFilesAndUrl.forEach(({ imageUrl }) => {
+          if (imageUrl) URL.revokeObjectURL(imageUrl);
+          console.log(imageUrl)
+        });
+      };
+    }, [validatedFilesAndUrl]);
+
 
   const handleFileChange = (event) => {
     let addedFiles = event.target.files;
@@ -30,10 +40,6 @@ const dropzone = ({
 
     const validFilesAndUrl = [];
     Array(...addedFiles).forEach((file, index) => {
-      // Revoke previous URL
-      if (validatedFilesAndUrl.length && validatedFilesAndUrl[index].imageUrl !== "") {
-        URL.revokeObjectURL(validatedFilesAndUrl.imageUrl);
-      }
       // validate file extension
       if (
         !allowedExtensions.includes(file.name.split(".").pop().toLowerCase())
