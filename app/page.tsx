@@ -2,6 +2,7 @@
 import { ChangeEvent, FormEvent, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Head from "next/head";
+import Dropzone from "@/app/components/dropzone"
 
 type UploadMessage = {
   text: string;
@@ -11,33 +12,28 @@ type UploadMessage = {
 type FileWithPreview = {
   file: File;
   preview?: string;
+  isIdCard: boolean;
 };
 
 export default function Home() {
+  // Student Id variable
   const [studentId, setStudentId] = useState<string>("");
   const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [message, setMessage] = useState<UploadMessage>({ text: "", isError: false });
-  const studentIdCardInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const CLOUD_NAME = 'dega42p1c';
   const UPLOAD_PRESET = 'student_id_uploads';
 
-  useEffect(() => {
-    return () => {
-      filesWithPreviews.forEach(({ preview }) => {
-        if (preview) URL.revokeObjectURL(preview);
-      });
-    };
-  }, [filesWithPreviews]);
+
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    console.log(`FWP ${filesWithPreviews}, SF ${selectedFiles}`)
+    console.log(e)
 
     if (filesWithPreviews.length + selectedFiles.length > 3) {
       setMessage({ text: "❌ Maximum 3 files allowed", isError: true });
@@ -66,7 +62,8 @@ export default function Home() {
 
       validFiles.push({
         file,
-        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+        isIdCard: false
       });
     });
 
@@ -168,113 +165,10 @@ export default function Home() {
                         disabled={isLoading}
                     />
                     {/* Student Identity Card upload input */}
-                    <div className="flex items-center justify-center w-full mb-4">
-                      <div id="header-and-dropzone" className="w-full">
-                        <div id="header-container" className="text-center py-2 border-t-2 border-l-2 border-r-2 border-gray-600 rounded-t-xl text-blue-500 dark:border-gray-300 dark:text-white dark:bg-blue-800 ">
-                          Student Id Card
-                        </div>
-                        <label
-                          htmlFor="dropzone-file"
-                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${filesWithPreviews.length ? 'border-solid' : 'border-dashed'} rounded-b-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${isLoading ? 'opacity-50' : ''}`}
-                        >
-                        {filesWithPreviews.length > 0 ? (
-                            <div className="w-full h-full p-2 overflow-y-auto">
-                                  <div className="relative h-full">
-                                        <Image
-                                            src={filesWithPreviews[0].preview ? filesWithPreviews[0].preview:''}
-                                            alt={``}
-                                            fill
-                                            className="object-cover rounded-lg"
-                                            sizes="(max-width: 768px) 100vw, 384px"
-                                        />
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg p-2">
-                                          <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                          </svg>
-                                          <span className="text-xs text-gray-700 truncate">{filesWithPreviews[0].file.name}</span>
-                                        </div>
-                                  </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
-                              </svg>
-                              <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                              <p className="text-xs text-gray-500">PNG, JPG (MAX. 5MB)</p>
-                            </div>
-                        )}
-                        <input
-                            id="dropzone-file"
-                            type="file"
-                            className="hidden"
-                            ref={studentIdCardInputRef}
-                            onChange={handleFileChange}
-                            accept=".jpg,.jpeg,.png"
-                            required
-                            multiple
-                            disabled={isLoading}
-                        />
-                        </label>
-                      </div>                      
-                    </div>
+                    <Dropzone name="Student Identity Card" id="student-id-card" isLoading={isLoading} multipleFiles={false} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={true} />
 
                     {/* Product Images Upload input */}
-                    <div className="flex items-center justify-center w-full">
-                      <div id="header-and-dropzone" className="w-full">
-                        <div id="header-container" className="text-center py-2 border-t-2 border-l-2 border-r-2 rounded-t-xl border-gray-600 text-purple-500  dark:border-gray-300 dark:text-white dark:bg-purple-800  ">
-                          Product uploads
-                        </div>
-                        <label
-                          htmlFor="dropzone-file"
-                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${filesWithPreviews.length ? 'border-solid' : 'border-dashed'} rounded-b-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${isLoading ? 'opacity-50' : ''}`}
-                        >
-                        {filesWithPreviews.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-4 w-full h-64 p-2 overflow-y-auto">
-                              {filesWithPreviews.map(({ file, preview }, index) => (
-                                  <div key={index} className="relative h-full">
-                                    {preview ? (
-                                        <Image
-                                            src={preview}
-                                            alt={`Preview ${index + 1}`}
-                                            fill
-                                            className="object-cover rounded-lg"
-                                            sizes="(max-width: 768px) 100vw, 384px"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg p-2">
-                                          <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                          </svg>
-                                          <span className="text-xs text-gray-700 truncate">{file.name}</span>
-                                        </div>
-                                    )}
-                                  </div>
-                              ))}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
-                              </svg>
-                              <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                              <p className="text-xs text-gray-500">PNG, JPG (MAX. 5MB)</p>
-                            </div>
-                        )}
-                        <input
-                            id="dropzone-file"
-                            type="file"
-                            className="hidden"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept=".jpg,.jpeg,.png"
-                            required
-                            multiple
-                            disabled={isLoading}
-                        />
-                        </label>
-                      </div>                      
-                    </div>
+                    <Dropzone name="Product Uploads" id="product-images" isLoading={isLoading} multipleFiles={true} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={false} />
 
                     <button
                         type="submit"
