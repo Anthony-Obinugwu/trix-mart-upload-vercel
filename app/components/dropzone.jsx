@@ -8,6 +8,8 @@ const dropzone = ({
   bgIsBlue,
   multipleFiles,
   allowedExtensions,
+  handleError,
+  handleFilesSubmit,
 }) => {
   const [validatedFilesAndUrl, setValidatedFilesAndUrl] = useState([]);
   
@@ -26,7 +28,8 @@ const dropzone = ({
     
     // Check for the uploaded file
     if (addedFiles.length === 0) {
-      console.log("Problem at uploaded check");
+      const error = {text: "Problem at uploaded check", isError: true};
+      handleError(error)
       return;
     }
     // validate number of files
@@ -34,7 +37,8 @@ const dropzone = ({
       (multipleFiles && addedFiles.length !== 2) ||
       (!multipleFiles && addedFiles.length !== 1)
     ) {
-      console.log("problem at number of files");
+      const error = {text: `${multipleFiles ? "2 Files required" : "1 file required"}`, isError: true};
+      handleError(error)
       return;
     }
 
@@ -44,23 +48,28 @@ const dropzone = ({
       if (
         !allowedExtensions.includes(file.name.split(".").pop().toLowerCase())
       ) {
-        console.log("Problem at extension check");
+        const error = {text: `${file.name} file not supported`, isError: true};
+        handleError(error)
         return;
       }
       // validate file size
       if (file.size > 5 * 1024 * 1024) {
-        console.log("problem at file size");
+        const error = {text: `${file.name} file too large`, isError: true};
+        handleError(error)
+        return;
       }
       // create preview link
-      console.log(file)
       const objectUrl = URL.createObjectURL(file);
-      console.log(objectUrl)
       validFilesAndUrl.push({ files: file, imageUrl: objectUrl })
+      // Clear errors if conditions met
+      const error = {text: "", isError: false};
+      handleError(error)
     });
     // add files
-    setValidatedFilesAndUrl([...validFilesAndUrl]);
-    console.log([...validFilesAndUrl])
-    // error handling
+    const resultArr = [...validFilesAndUrl]
+    const filesOnlyArr = resultArr.map(item=>item.files)
+    setValidatedFilesAndUrl(resultArr);
+    handleFilesSubmit(filesOnlyArr, id)
   };
 
   return (
@@ -158,7 +167,7 @@ const dropzone = ({
           <input
             id={id}
             type="file"
-            className="hidden"
+            className=""
             name={id}
             // ref={`${name}InputRef`}
             onChange={handleFileChange}

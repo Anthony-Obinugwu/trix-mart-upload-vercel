@@ -9,16 +9,15 @@ type UploadMessage = {
   isError: boolean;
 };
 
-type FileWithPreview = {
-  file: File;
-  preview?: string;
-  isIdCard: boolean;
+type submissionFiles = {
+  studentIdFile: File[];
+  productFiles: File[];
 };
 
 export default function Home() {
   // Student Id variable
   const [studentId, setStudentId] = useState<string>("");
-  const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
+  const [submissionFiles, setSubmissionFiles] = useState<submissionFiles>({studentIdFile: [], productFiles: []});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [message, setMessage] = useState<UploadMessage>({ text: "", isError: false });
@@ -27,57 +26,67 @@ export default function Home() {
   const CLOUD_NAME = 'dega42p1c';
   const UPLOAD_PRESET = 'student_id_uploads';
 
+  const displayErrorMessages = (errorObject: UploadMessage) => {
+    setMessage(errorObject);
+  }
 
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    if (selectedFiles.length === 0) return;
-
-    console.log(e)
-
-    if (filesWithPreviews.length + selectedFiles.length > 3) {
-      setMessage({ text: "❌ Maximum 3 files allowed", isError: true });
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
+  const handleFilesSubmit = (filesArray: Array<File>, id: String) => {
+    if(id === "student-id-card"){
+      setSubmissionFiles({...submissionFiles, studentIdFile: filesArray});
+    }else if(id === "product-images"){
+      setSubmissionFiles({...submissionFiles, productFiles: filesArray});
     }
+  }
 
-    const validFiles: FileWithPreview[] = [];
-    const invalidMessages: string[] = [];
+  // const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   const selectedFiles = Array.from(e.target.files || []);
+  //   if (selectedFiles.length === 0) return;
 
-    selectedFiles.forEach((file) => {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'gif', 'webp', 'svg'];
+  //   console.log(e)
 
-      console.log(extension, file)
+  //   if (filesWithPreviews.length + selectedFiles.length > 3) {
+  //     setMessage({ text: "❌ Maximum 3 files allowed", isError: true });
+  //     if (fileInputRef.current) fileInputRef.current.value = '';
+  //     return;
+  //   }
 
-      if (!extension || !allowedExtensions.includes(extension)) {
-        invalidMessages.push(`Invalid file type: ${file.name}`);
-        return;
-      }
+  //   const validFiles: FileWithPreview[] = [];
+  //   const invalidMessages: string[] = [];
 
-      if (file.size > 5 * 1024 * 1024) {
-        invalidMessages.push(`File too large: ${file.name}`);
-        return;
-      }
+  //   selectedFiles.forEach((file) => {
+  //     const extension = file.name.split('.').pop()?.toLowerCase();
+  //     const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'gif', 'webp', 'svg'];
 
-      validFiles.push({
-        file,
-        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-        isIdCard: false
-      });
-    });
+  //     console.log(extension, file)
 
-      console.log(fileInputRef, fileInputRef.current, fileInputRef.current?.value)
-    if (invalidMessages.length > 0) {
-      setMessage({ text: `❌ ${invalidMessages.join(' ')}`, isError: true});
-      if (fileInputRef.current) fileInputRef.current.value = '';
+  //     if (!extension || !allowedExtensions.includes(extension)) {
+  //       invalidMessages.push(`Invalid file type: ${file.name}`);
+  //       return;
+  //     }
 
-      return;
-    }
+  //     if (file.size > 5 * 1024 * 1024) {
+  //       invalidMessages.push(`File too large: ${file.name}`);
+  //       return;
+  //     }
 
-    setFilesWithPreviews(prev => [...prev, ...validFiles]);
-    setMessage({ text: "", isError: false });
-  };
+  //     validFiles.push({
+  //       file,
+  //       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+  //       isIdCard: false
+  //     });
+  //   });
+
+  //     console.log(fileInputRef, fileInputRef.current, fileInputRef.current?.value)
+  //   if (invalidMessages.length > 0) {
+  //     setMessage({ text: `❌ ${invalidMessages.join(' ')}`, isError: true});
+  //     if (fileInputRef.current) fileInputRef.current.value = '';
+
+  //     return;
+  //   }
+
+  //   setFilesWithPreviews(prev => [...prev, ...validFiles]);
+  //   setMessage({ text: "", isError: false });
+  // };
 
   const uploadToCloudinary = async (file: File, studentId: string) => {
     const formData = new FormData();
@@ -96,7 +105,7 @@ export default function Home() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!filesWithPreviews.length || !studentId) {
+    if (!submissionFiles.studentIdFile || !submissionFiles.productFiles || !studentId) {
       setMessage({ text: "❌ Please fill all fields", isError: true });
       return;
     }
@@ -104,14 +113,16 @@ export default function Home() {
     setIsLoading(true);
     setMessage({ text: "", isError: false });
 
+    const filesToUpload = [submissionFiles.studentIdFile[0], submissionFiles.productFiles[0], submissionFiles.productFiles[1]]
+    console.log(filesToUpload);
     try {
       await Promise.all(
-          filesWithPreviews.map(({ file }) => uploadToCloudinary(file, studentId))
+          filesToUpload.map((file)=>uploadToCloudinary(file, studentId))
       );
 
       setIsSuccess(true);
       setStudentId("");
-      setFilesWithPreviews([]);
+      setSubmissionFiles({studentIdFile: [], productFiles: []});
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       setMessage({
@@ -165,11 +176,12 @@ export default function Home() {
                         disabled={isLoading}
                     />
                     {/* Student Identity Card upload input */}
-                    <Dropzone name="Student Identity Card" id="student-id-card" isLoading={isLoading} multipleFiles={false} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={true} />
+                    <Dropzone name="Student Identity Card" id="student-id-card" isLoading={isLoading} multipleFiles={false} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={true} handleError={displayErrorMessages} handleFilesSubmit={handleFilesSubmit} />
 
                     {/* Product Images Upload input */}
-                    <Dropzone name="Product Uploads" id="product-images" isLoading={isLoading} multipleFiles={true} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={false} />
+                    <Dropzone name="Product Uploads" id="product-images" isLoading={isLoading} multipleFiles={true} allowedExtensions={['png', 'jpg', 'jpeg']} bgIsBlue={false} handleError={displayErrorMessages} handleFilesSubmit={handleFilesSubmit} />
 
+                    {/* Submission button */}
                     <button
                         type="submit"
                         disabled={isLoading}
@@ -178,6 +190,7 @@ export default function Home() {
                       {isLoading ? 'Uploading...' : 'Upload'}
                     </button>
 
+                    {/* Error message display */}
                     {message.text && (
                         <p className={`mt-4 text-center ${message.isError ? 'text-red-500' : 'text-green-500'}`}>
                           {message.text}
@@ -187,6 +200,7 @@ export default function Home() {
               )}
             </div>
 
+            {/* Info on what to submit */}
             <div className="flex justify-center">
               {isSuccess ? (
                   <></>
@@ -203,6 +217,7 @@ export default function Home() {
             </div>
           </main>
 
+          {/* Page Footers */}
           <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
             <a
                 className="flex items-center gap-2 hover:underline hover:underline-offset-4"
