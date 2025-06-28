@@ -205,14 +205,12 @@ export default function Home() {
               {isSuccess ? (
                   <></>
               ) : (
-                <div>
-                  <p className="-indent-4">Please upload:</p>
-                  <ol className="list-decimal">
-                    <li>Student Identity card</li>
-                    <li>Business certification (If any)</li>
-                    <li>Two products you sell</li>
-                  </ol>
-                </div>
+                  <>
+                    <p className="font-semibold">Please Upload:</p>
+                    <p>1. Your student ID</p>
+                    <p>2. Two product photos</p>
+                    <p>3. One video of you and your product</p>
+                  </>
               )}
             </div>
           </main>
