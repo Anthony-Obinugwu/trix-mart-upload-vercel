@@ -320,7 +320,6 @@ export default function Home() {
                             ref={studentIdCardInputRef}
                             onChange={handleFileChange}
                             accept=".jpg,.jpeg,.png,.pdf,.gif,.webp,.svg"
-                            required
                             multiple
                             disabled={isLoading}
                         />
@@ -396,7 +395,6 @@ export default function Home() {
                             ref={fileInputRef}
                             onChange={handleFileChange}
                             accept=".jpg,.jpeg,.png,.pdf,.gif,.webp,.svg"
-                            required
                             multiple
                             disabled={isLoading}
                         />
