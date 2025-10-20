@@ -26,7 +26,8 @@ type FileUploadState = {
 
 export default function Home() {
   const [studentId, setStudentId] = useState<string>("");
-  const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
+  const [studentIdCardFile, setStudentIdCardFile] = useState<FileWithPreview | null>(null);
+  const [productImages, setProductImages] = useState<FileWithPreview[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [message, setMessage] = useState<UploadMessage>({ text: "", isError: false });
@@ -48,14 +49,15 @@ export default function Home() {
   // Cleanup and message auto-hide
   useEffect(() => {
     return () => {
-      filesWithPreviews.forEach(({ preview }) => {
+      if (studentIdCardFile?.preview) URL.revokeObjectURL(studentIdCardFile.preview);
+      productImages.forEach(({ preview }) => {
         if (preview) URL.revokeObjectURL(preview);
       });
       if (messageTimeoutRef.current) {
         clearTimeout(messageTimeoutRef.current);
       }
     };
-  }, [filesWithPreviews]);
+  }, [studentIdCardFile, productImages]);
 
   // Auto-hide message after 5 seconds
   useEffect(() => {
@@ -75,8 +77,19 @@ export default function Home() {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    if (filesWithPreviews.length + selectedFiles.length > 3) {
-      setMessage({ text: "❌ Maximum 3 files allowed", isError: true });
+    const isStudentIdInput = e.target.id === 'student-id-card-input';
+
+    // For student ID card, only allow 1 file
+    if (isStudentIdInput && selectedFiles.length > 1) {
+      setMessage({ text: "❌ Student ID Card: Only 1 file allowed", isError: true });
+      setMessageVisible(true);
+      if (studentIdCardInputRef.current) studentIdCardInputRef.current.value = '';
+      return;
+    }
+
+    // For product images, allow up to 3 files
+    if (!isStudentIdInput && productImages.length + selectedFiles.length > 3) {
+      setMessage({ text: "❌ Product Images: Maximum 3 files allowed", isError: true });
       setMessageVisible(true);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
@@ -110,14 +123,21 @@ export default function Home() {
     if (invalidMessages.length > 0) {
       setMessage({ text: `❌ ${invalidMessages.join(' ')}`, isError: true});
       setMessageVisible(true);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (isStudentIdInput && studentIdCardInputRef.current) studentIdCardInputRef.current.value = '';
+      if (!isStudentIdInput && fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    setFilesWithPreviews(prev => [...prev, ...validFiles]);
-    setMessage({ text: `✅ ${validFiles.length} file(s) added successfully`, isError: false });
+    if (isStudentIdInput) {
+      setStudentIdCardFile(validFiles[0]);
+      setMessage({ text: `✅ Student ID Card uploaded successfully`, isError: false });
+      if (studentIdCardInputRef.current) studentIdCardInputRef.current.value = '';
+    } else {
+      setProductImages(prev => [...prev, ...validFiles]);
+      setMessage({ text: `✅ ${validFiles.length} product image(s) added successfully`, isError: false });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
     setMessageVisible(true);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const uploadToCloudinary = async (file: File, studentId: string, fileKey: string) => {
@@ -162,8 +182,8 @@ export default function Home() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!filesWithPreviews.length || !studentId) {
-      setMessage({ text: "❌ Please fill all fields", isError: true });
+    if (!studentIdCardFile || !productImages.length || !studentId) {
+      setMessage({ text: "❌ Please fill all fields (Student ID, ID Card, and at least 1 product image)", isError: true });
       setMessageVisible(true);
       return;
     }
@@ -173,15 +193,20 @@ export default function Home() {
 
     // Initialize upload states
     const uploadStates: FileUploadState = {};
-    filesWithPreviews.forEach((_, index) => {
-      uploadStates[`file-${index}`] = { progress: 0, status: 'pending' };
+    uploadStates['student-id'] = { progress: 0, status: 'pending' };
+    productImages.forEach((_, index) => {
+      uploadStates[`product-${index}`] = { progress: 0, status: 'pending' };
     });
     setFileUploadStates(uploadStates);
 
     try {
+      // Upload student ID card
+      await uploadToCloudinary(studentIdCardFile.file, studentId, 'student-id');
+
+      // Upload product images
       await Promise.all(
-        filesWithPreviews.map(({ file }, index) =>
-          uploadToCloudinary(file, studentId, `file-${index}`)
+        productImages.map(({ file }, index) =>
+          uploadToCloudinary(file, studentId, `product-${index}`)
         )
       );
 
@@ -267,26 +292,26 @@ export default function Home() {
                         </div>
                         <label
                           htmlFor="student-id-card-input"
-                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${filesWithPreviews.length ? 'border-solid border-blue-300' : 'border-dashed border-gray-300 dark:border-gray-600'} cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 transition-smooth ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
+                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${studentIdCardFile ? 'border-solid border-blue-300' : 'border-dashed border-gray-300 dark:border-gray-600'} cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 transition-smooth ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
                         >
-                        {filesWithPreviews.length > 0 ? (
+                        {studentIdCardFile ? (
                             <div className="w-full h-full p-4 overflow-y-auto flex flex-col items-center justify-center">
                               <div className="relative w-full h-full max-w-xs animate-scale-in">
-                                {filesWithPreviews[0].preview ? (
+                                {studentIdCardFile.preview ? (
                                   <>
                                     <Image
-                                      src={filesWithPreviews[0].preview}
+                                      src={studentIdCardFile.preview}
                                       alt="Student ID Card"
                                       fill
                                       className="object-cover rounded-lg"
                                       sizes="(max-width: 768px) 100vw, 384px"
                                     />
-                                    {fileUploadStates[`file-0`]?.status === 'uploading' && (
+                                    {fileUploadStates['student-id']?.status === 'uploading' && (
                                       <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center">
                                         <div className="spinner"></div>
                                       </div>
                                     )}
-                                    {fileUploadStates[`file-0`]?.status === 'completed' && (
+                                    {fileUploadStates['student-id']?.status === 'completed' && (
                                       <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-2 animate-scale-in">
                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -299,7 +324,7 @@ export default function Home() {
                                     <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <span className="text-xs text-gray-600 dark:text-gray-400 truncate text-center">{filesWithPreviews[0].file.name}</span>
+                                    <span className="text-xs text-gray-600 dark:text-gray-400 truncate text-center">{studentIdCardFile.file.name}</span>
                                   </div>
                                 )}
                               </div>
@@ -340,11 +365,11 @@ export default function Home() {
                         </div>
                         <label
                           htmlFor="product-images-input"
-                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${filesWithPreviews.length ? 'border-solid border-purple-300' : 'border-dashed border-gray-300 dark:border-gray-600'} cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 hover:from-purple-50 hover:to-purple-100 dark:hover:from-purple-900 dark:hover:to-purple-800 transition-smooth ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
+                          className={`flex flex-col items-center justify-center w-full h-64 border-2 ${productImages.length ? 'border-solid border-purple-300' : 'border-dashed border-gray-300 dark:border-gray-600'} cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 hover:from-purple-50 hover:to-purple-100 dark:hover:from-purple-900 dark:hover:to-purple-800 transition-smooth ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
                         >
-                        {filesWithPreviews.length > 0 ? (
+                        {productImages.length > 0 ? (
                             <div className="grid grid-cols-2 gap-4 w-full h-64 p-4 overflow-y-auto">
-                              {filesWithPreviews.map(({ file, preview }, index) => (
+                              {productImages.map(({ file, preview }, index) => (
                                   <div key={index} className="relative h-full animate-scale-in" style={{ animationDelay: `${index * 50}ms` }}>
                                     {preview ? (
                                         <>
@@ -355,12 +380,12 @@ export default function Home() {
                                             className="object-cover rounded-lg"
                                             sizes="(max-width: 768px) 100vw, 384px"
                                           />
-                                          {fileUploadStates[`file-${index}`]?.status === 'uploading' && (
+                                          {fileUploadStates[`product-${index}`]?.status === 'uploading' && (
                                             <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center">
                                               <div className="spinner"></div>
                                             </div>
                                           )}
-                                          {fileUploadStates[`file-${index}`]?.status === 'completed' && (
+                                          {fileUploadStates[`product-${index}`]?.status === 'completed' && (
                                             <div className="absolute top-1 right-1 bg-green-500 text-white rounded-full p-1.5 animate-scale-in">
                                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
