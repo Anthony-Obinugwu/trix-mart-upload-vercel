@@ -217,8 +217,10 @@ export default function Home() {
       // Reset form after delay
       setTimeout(() => {
         setStudentId("");
-        setFilesWithPreviews([]);
+        setStudentIdCardFile(null);
+        setProductImages([]);
         setFileUploadStates({});
+        if (studentIdCardInputRef.current) studentIdCardInputRef.current.value = '';
         if (fileInputRef.current) fileInputRef.current.value = '';
       }, 2000);
     } catch (err) {
