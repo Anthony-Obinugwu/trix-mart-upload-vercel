@@ -486,7 +486,7 @@ export default function Home() {
                       <span>Business certification (If any)</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span>Two products you sell</span>
+                      <span>Product(s) you sell</span>
                     </li>
                   </ol>
                 </div>
@@ -509,22 +509,6 @@ export default function Home() {
                   height={20}
               />
               <span>TrixMart</span>
-            </a>
-            <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-            <a
-                className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-smooth hover:underline hover:underline-offset-4"
-                href="/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-              <Image
-                  aria-hidden
-                  src="/window.svg"
-                  alt="Window icon"
-                  width={16}
-                  height={16}
-              />
-              <span>Terms and Conditions</span>
             </a>
             <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
             <a
